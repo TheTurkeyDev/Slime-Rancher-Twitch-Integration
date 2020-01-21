@@ -2,6 +2,10 @@
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
+    <!--Change this line to point to your own Slime Rancher installation and make sure you have installed Slime Rancher Mod Loader-->
+    <SlimeRancherInstallation>C:\Program Files(x86)\Steam\steamapps\common\Slime Rancher</SlimeRancherInstallation>
+  </PropertyGroup>
+  <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{4E28CC6D-BCDC-42A1-A385-77AEDBE051A5}</ProjectGuid>
@@ -35,16 +39,16 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="0Harmony">
-      <HintPath>..\..\..\..\Apps\SteamLibrary\steamapps\common\Slime Rancher\SRML\Libs\0Harmony.dll</HintPath>
+      <HintPath>$(SlimeRancherInstallation)\SRML\Libs\0Harmony.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp_old">
-      <HintPath>..\..\..\..\Apps\SteamLibrary\steamapps\common\Slime Rancher\SlimeRancher_Data\Managed\Assembly-CSharp_old.dll</HintPath>
+      <HintPath>$(SlimeRancherInstallation)\SlimeRancher_Data\Managed\Assembly-CSharp_old.dll</HintPath>
     </Reference>
     <Reference Include="InControl">
-      <HintPath>..\..\..\..\Apps\SteamLibrary\steamapps\common\Slime Rancher\SlimeRancher_Data\Managed\InControl.dll</HintPath>
+      <HintPath>$(SlimeRancherInstallation)\SlimeRancher_Data\Managed\InControl.dll</HintPath>
     </Reference>
     <Reference Include="SRML">
-      <HintPath>..\..\..\..\Apps\SteamLibrary\steamapps\common\Slime Rancher\SlimeRancher_Data\Managed\SRML.dll</HintPath>
+      <HintPath>$(SlimeRancherInstallation)\SlimeRancher_Data\Managed\SRML.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -54,26 +58,26 @@
     <Reference Include="System.Xml" />
     <Reference Include="UnityEngine, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\Apps\SteamLibrary\steamapps\common\Slime Rancher\SlimeRancher_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>$(SlimeRancherInstallation)\SlimeRancher_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>..\..\..\..\Apps\SteamLibrary\steamapps\common\Slime Rancher\SlimeRancher_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>$(SlimeRancherInstallation)\SlimeRancher_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\Apps\SteamLibrary\steamapps\common\Slime Rancher\SlimeRancher_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+      <HintPath>$(SlimeRancherInstallation)\SlimeRancher_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\Apps\SteamLibrary\steamapps\common\Slime Rancher\SlimeRancher_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
+      <HintPath>$(SlimeRancherInstallation)\SlimeRancher_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.UI, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\Apps\SteamLibrary\steamapps\common\Slime Rancher\SlimeRancher_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <HintPath>$(SlimeRancherInstallation)\SlimeRancher_Data\Managed\UnityEngine.UI.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.UIModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\Apps\SteamLibrary\steamapps\common\Slime Rancher\SlimeRancher_Data\Managed\UnityEngine.UIModule.dll</HintPath>
+      <HintPath>$(SlimeRancherInstallation)\SlimeRancher_Data\Managed\UnityEngine.UIModule.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -90,6 +94,6 @@
     </PreBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
-    <PostBuildEvent>copy "$(TargetPath)" "D:\Apps\SteamLibrary\steamapps\common\Slime Rancher\SRML\Mods"</PostBuildEvent>
+    <PostBuildEvent>copy "$(TargetPath)" "$(SlimeRancherInstallation)\SRML\Mods"</PostBuildEvent>
   </PropertyGroup>
 </Project>
