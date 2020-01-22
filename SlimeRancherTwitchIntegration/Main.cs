@@ -1,11 +1,13 @@
 ﻿using HarmonyLib;
 using InControl;
+using MonomiPark.SlimeRancher.DataModel;
 using MonomiPark.SlimeRancher.Regions;
 using SlimeRancherTwitchIntegration;
 using SRML;
 using SRML.SR;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
@@ -21,13 +23,14 @@ namespace TwitchIntegration
     public class Main : ModEntryPoint
     {
         public static ConcurrentQueue<RewardData> rewardsQueue = new ConcurrentQueue<RewardData>();
+        public static List<UpgradeHolder> plotsEdited = new List<UpgradeHolder>();
 
         // Called before GameContext.Awake
         // You want to register new things and enum values here, as well as do all your harmony patching
         public override void PreLoad()
         {
             HarmonyInstance.PatchAll();
-            SceneManager.activeSceneChanged += new UnityAction<Scene, Scene>(ChatWindow.AttachWindow);
+            SceneManager.activeSceneChanged += new UnityAction<Scene, Scene>(NotificationUI.AttachWindow);
         }
 
 
@@ -52,6 +55,7 @@ namespace TwitchIntegration
             {
                 if (Levels.IsLevel(Levels.WORLD))
                 {
+                    DateTime currentTime = DateTime.UtcNow;
                     Transform playerLoc = SceneContext.Instance.Player.transform;
                     RewardData reward;
                     if (rewardsQueue.TryDequeue(out reward))
@@ -68,18 +72,103 @@ namespace TwitchIntegration
                                         continue;
                                     for (int i = 0; i < s.count; i++)
                                     {
-                                        GameObject slotObject = GameContext.Instance.LookupDirector.GetPrefab(s.id);
-                                        RegionMember region = (RegionMember)Traverse.Create(SceneContext.Instance.PlayerZoneTracker).Field("member").GetValue();
-                                        GameObject gameObject = SRBehaviour.InstantiateActor(slotObject, region.setId, playerLoc.position + playerLoc.forward * 0.5f, playerLoc.rotation, false);
-                                        Rigidbody component = gameObject.GetComponent<Rigidbody>();
-                                        component.AddForce((playerLoc.forward * 100f + UnityEngine.Random.insideUnitSphere * 100f) * component.mass);
+                                        spawnObject(s.id, playerLoc);
                                     }
                                 }
                                 ammo.Clear();
                                 break;
+                            case "meteor_shower":
+                                break;
+                            case "downgrade_plot":
+                                int duration;
+                                int.TryParse(reward.args[0], out duration);
+                                int numPlots;
+                                int.TryParse(reward.args[1], out numPlots);
+                                bool removeAllWalls;
+                                bool.TryParse(reward.args[2], out removeAllWalls);
+                                List<LandPlotModel> validplots = new List<LandPlotModel>();
+                                foreach (LandPlotModel plot in SceneContext.Instance.GameModel.AllLandPlots().Values)
+                                    if (plot.typeId == LandPlot.Id.CORRAL)
+                                        validplots.Add(plot);
+
+                                while (validplots.Count > 0 && numPlots != 0)
+                                {
+                                    LandPlotModel plotModel = validplots.ToArray()[UnityEngine.Random.Range(0, validplots.Count())];
+                                    validplots.Remove(plotModel);
+                                    numPlots--;
+                                    LandPlot plot = ((GameObject)Traverse.Create(plotModel).Field("gameObj").GetValue()).GetComponentInChildren<LandPlot>();
+                                    HashSet<LandPlot.Upgrade> upgrades = new HashSet<LandPlot.Upgrade>();
+                                    foreach (PlotUpgrader component in plot.GetComponents<PlotUpgrader>())
+                                    {
+                                        if (component is AirNetUpgrader && plot.HasUpgrade(LandPlot.Upgrade.AIR_NET))
+                                        {
+                                            upgrades.Add(LandPlot.Upgrade.AIR_NET);
+                                            foreach (GameObject airNet in ((AirNetUpgrader)component).airNets)
+                                                airNet.SetActive(false);
+                                        }
+                                        else if (component is SolarShieldUpgrader && plot.HasUpgrade(LandPlot.Upgrade.SOLAR_SHIELD))
+                                        {
+                                            upgrades.Add(LandPlot.Upgrade.SOLAR_SHIELD);
+                                            foreach (GameObject shield in ((SolarShieldUpgrader)component).shields)
+                                                shield.SetActive(false);
+                                        }
+                                        else if (component is WallUpgrader && plot.HasUpgrade(LandPlot.Upgrade.WALLS))
+                                        {
+                                            upgrades.Add(LandPlot.Upgrade.WALLS);
+                                            ((WallUpgrader)component).standardWalls.SetActive(!removeAllWalls);
+                                            ((WallUpgrader)component).upgradeWalls.SetActive(false);
+                                        }
+                                        plotsEdited.Add(new UpgradeHolder(plot, upgrades, duration * 1000));
+                                    }
+                                }
+                                break;
+                            case "spawn_object":
+                                int objectID;
+                                int.TryParse(reward.args[0], out objectID);
+                                int ammount;
+                                int.TryParse(reward.args[1], out ammount);
+                                if (Enum.IsDefined(typeof(Identifiable.Id), objectID))
+                                {
+                                    Identifiable.Id obj = (Identifiable.Id)objectID;
+                                    for (int i = 0; i < ammount; i++)
+                                        spawnObject(obj, playerLoc);
+                                }
+                                else
+                                {
+                                    Debug.LogError("Could not spawn in object with the ID of " + objectID + ". INVALID ID!");
+                                }
+                                break;
+                            case "treasure":
+                                break;
+                            case "push_player":
+                                break;
+                            case "new_trade":
+                                //SceneContext.Instance.ExchangeDirector.
+                                break;
+                        }
+                    }
+
+                    for (int i = plotsEdited.Count - 1; i >= 0; i--)
+                    {
+                        UpgradeHolder plot = plotsEdited[i];
+                        if ((currentTime - plot.Spawned).TotalMilliseconds > plot.Duration)
+                        {
+                            Debug.Log("Reset Upgrades");
+                            plot.Reset();
+                            plotsEdited.RemoveAt(i);
                         }
                     }
                 }
+            }
+            private static void spawnObject(Identifiable.Id obj, Transform location)
+            {
+                GameObject slotObject = GameContext.Instance.LookupDirector.GetPrefab(obj);
+                RegionMember region = (RegionMember)Traverse.Create(SceneContext.Instance.PlayerZoneTracker).Field("member").GetValue();
+                Vector3 vec = UnityEngine.Random.insideUnitSphere;
+                vec.y = Math.Abs(vec.y);
+                GameObject gameObject = SRBehaviour.InstantiateActor(slotObject, region.setId, location.position + vec, location.rotation, false);
+                Rigidbody component = gameObject.GetComponent<Rigidbody>();
+                component.AddForce(UnityEngine.Random.insideUnitSphere * 25f);
             }
         }
 
@@ -150,7 +239,7 @@ namespace TwitchIntegration
                                             else if (line.StartsWith("Message: "))
                                             {
                                                 string message = line.Substring(9);
-                                                ChatWindow.addChatMessage(message);
+                                                NotificationUI.addChatMessage(message);
                                             }
                                         }
                                         //Only read every 50ms
