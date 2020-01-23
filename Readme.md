@@ -1,8 +1,11 @@
 # Slime Rancher Twitch Integration
 
 ## Playing
-\<WIP>
-
+1. Download Slime Rancher Mod Loader https://cdn.discordapp.com/attachments/424954731371167744/656126660835278848/SRMLInstaller.exe
+2. Move the downloaded file to <Path To Steam Library>\steamapps\common\Slime Rancher\SlimeRancher_Data\Managed
+3. Run the exe file
+4. A folder named "SRML" should now apear in the base "Slime Rancher" folder. Inside of "SRML" should be a mods folder. Place the .dll mod file inside that folder.
+5. Launch the game!
 ---
 
 ## Contributing

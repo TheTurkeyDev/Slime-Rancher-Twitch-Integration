@@ -3,7 +3,7 @@
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <!--Change this line to point to your own Slime Rancher installation and make sure you have installed Slime Rancher Mod Loader-->
-    <SlimeRancherInstallation>C:\Program Files(x86)\Steam\steamapps\common\Slime Rancher</SlimeRancherInstallation>
+    <SlimeRancherInstallation>D:\Apps\SteamLibrary\steamapps\common\Slime Rancher</SlimeRancherInstallation>
   </PropertyGroup>
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -59,6 +59,10 @@
     <Reference Include="UnityEngine, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(SlimeRancherInstallation)\SlimeRancher_Data\Managed\UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.AudioModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Apps\SteamLibrary\steamapps\common\Slime Rancher\SlimeRancher_Data\Managed\UnityEngine.AudioModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>$(SlimeRancherInstallation)\SlimeRancher_Data\Managed\UnityEngine.CoreModule.dll</HintPath>

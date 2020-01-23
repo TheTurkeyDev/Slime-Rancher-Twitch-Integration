@@ -1,10 +1,8 @@
 ﻿using HarmonyLib;
-using InControl;
 using MonomiPark.SlimeRancher.DataModel;
 using MonomiPark.SlimeRancher.Regions;
 using SlimeRancherTwitchIntegration;
 using SRML;
-using SRML.SR;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -24,6 +22,8 @@ namespace TwitchIntegration
     {
         public static ConcurrentQueue<RewardData> rewardsQueue = new ConcurrentQueue<RewardData>();
         public static List<UpgradeHolder> plotsEdited = new List<UpgradeHolder>();
+        public static bool push = false;
+        public static PushData pushData;
 
         // Called before GameContext.Awake
         // You want to register new things and enum values here, as well as do all your harmony patching
@@ -138,9 +138,32 @@ namespace TwitchIntegration
                                     Debug.LogError("Could not spawn in object with the ID of " + objectID + ". INVALID ID!");
                                 }
                                 break;
-                            case "treasure":
-                                break;
                             case "push_player":
+                                float pushMin = 0.1f;
+                                float.TryParse(reward.args[0], out pushMin);
+                                float pushMax = 0.3f;
+                                float.TryParse(reward.args[1], out pushMax);
+                                if (push)
+                                {
+                                    pushData.left += 8;
+                                }
+                                else
+                                {
+                                    push = true;
+                                    pushData = new PushData(pushMin, pushMax, currentTime, 250);
+                                }
+                                break;
+                            case "give_money":
+                                int amountToGive;
+                                int.TryParse(reward.args[0], out amountToGive);
+                                SceneContext.Instance.PlayerState.AddCurrency(amountToGive);
+                                break;
+                            case "take_money":
+                                int amountToTake;
+                                int.TryParse(reward.args[0], out amountToTake);
+                                if (SceneContext.Instance.PlayerState.GetCurrency() < amountToTake)
+                                    amountToTake = SceneContext.Instance.PlayerState.GetCurrency();
+                                SceneContext.Instance.PlayerState.SpendCurrency(amountToTake);
                                 break;
                             case "new_trade":
                                 //SceneContext.Instance.ExchangeDirector.
@@ -158,8 +181,27 @@ namespace TwitchIntegration
                             plotsEdited.RemoveAt(i);
                         }
                     }
+
+                    if (push)
+                    {
+                        SceneContext.Instance.Player.transform.position += pushData.push;
+                        if ((currentTime - pushData.startTime).TotalMilliseconds > pushData.duration)
+                        {
+                            pushData.left--;
+                            if (pushData.left == 0)
+                            {
+                                push = false;
+                            }
+                            else
+                            {
+                                pushData.startTime = currentTime;
+                                pushData.nextPush();
+                            }
+                        }
+                    }
                 }
             }
+
             private static void spawnObject(Identifiable.Id obj, Transform location)
             {
                 GameObject slotObject = GameContext.Instance.LookupDirector.GetPrefab(obj);
@@ -270,6 +312,47 @@ namespace TwitchIntegration
                     this.args = new string[0];
                 else
                     this.args = args;
+            }
+        }
+
+        public class PushData
+        {
+            private float minPush;
+            private float maxPush;
+            public Vector3 push;
+            public DateTime startTime;
+            public int duration;
+            public int left = 8;
+
+            public PushData(float minPush, float maxPush, DateTime startTime, int duration)
+            {
+                this.minPush = minPush;
+                this.maxPush = maxPush;
+                this.startTime = startTime;
+                this.duration = duration;
+                nextPush();
+            }
+
+            public void nextPush()
+            {
+                pushData.push = getBoundedRandVector(minPush, maxPush);
+            }
+
+            private Vector3 getBoundedRandVector(float min, float max)
+            {
+                float x;
+                float z;
+                if (UnityEngine.Random.value > 0.5)
+                    x = UnityEngine.Random.Range(-max, -min);
+                else
+                    x = UnityEngine.Random.Range(min, max);
+
+                if (UnityEngine.Random.value > 0.5)
+                    z = UnityEngine.Random.Range(-max, -min);
+                else
+                    z = UnityEngine.Random.Range(min, max);
+
+                return new Vector3(x, 0, z);
             }
         }
     }
