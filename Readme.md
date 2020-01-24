@@ -1,11 +1,16 @@
 # Slime Rancher Twitch Integration
 
 ## Playing
-1. Download Slime Rancher Mod Loader https://cdn.discordapp.com/attachments/424954731371167744/656126660835278848/SRMLInstaller.exe
-2. Move the downloaded file to <Path To Steam Library>\steamapps\common\Slime Rancher\SlimeRancher_Data\Managed
-3. Run the exe file
-4. A folder named "SRML" should now apear in the base "Slime Rancher" folder. Inside of "SRML" should be a mods folder. Place the .dll mod file inside that folder.
-5. Launch the game!
+1. Make sure you have the latest versions of Slime rancher, [Slime Rancher Mod Loader](https://cdn.discordapp.com/attachments/424954731371167744/656126660835278848/SRMLInstaller.exe), and 7DaysToStream
+2. [Grab the latest of release of the mod and Integration Actions ](https://github.com/Turkey2349/Slime-Rancher-Twitch-Integration/releases). The 2 Needed files are `SlimeRancherTwitchIntegration.dll` and `SlimeRancherTwitchIntegrationActions.dll`
+3. Navigate to the installation location for Slime Rancher `<Path To Steam Library>\steamapps\common\Slime Rancher`.
+4. Now Go into SlimeRancher_Data -> Managed and paste the .exe file for the Slime Rancher Mod Loader.
+5. Run the .exe file
+6. A `SRML` folder should now have been created inside the root Slime Rancher Game folder. Inside of that should be a `Mods` folder. Paste the mod file `SlimeRancherTwitchIntegration.dll` in this folder. 
+7. Navigate to the installation location for 7DaysToStream and open the `Integrations` folder.
+8. Create a folder named `SlimeRancher`.
+9. Inside of this folder put `SlimeRancherTwitchIntegrationActions.dll` and your `Events.txt` file that you create for 7DaysToStream
+10. Launch 7DaysToStream and Slime Rancher normally and it should all be setup!
 ---
 
 ## Contributing
