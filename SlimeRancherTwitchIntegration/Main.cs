@@ -153,20 +153,23 @@ namespace TwitchIntegration
                                     pushData = new PushData(pushMin, pushMax, currentTime, 250);
                                 }
                                 break;
-                            case "give_money":
-                                int amountToGive;
-                                int.TryParse(reward.args[0], out amountToGive);
-                                SceneContext.Instance.PlayerState.AddCurrency(amountToGive);
-                                break;
-                            case "take_money":
-                                int amountToTake;
-                                int.TryParse(reward.args[0], out amountToTake);
-                                if (SceneContext.Instance.PlayerState.GetCurrency() < amountToTake)
-                                    amountToTake = SceneContext.Instance.PlayerState.GetCurrency();
-                                SceneContext.Instance.PlayerState.SpendCurrency(amountToTake);
-                                break;
-                            case "new_trade":
-                                //SceneContext.Instance.ExchangeDirector.
+                            case "adjust_money":
+                                int amountToAdjust;
+                                int.TryParse(reward.args[0], out amountToAdjust);
+                                if (amountToAdjust < 0)
+                                {
+                                    if (SceneContext.Instance.PlayerState.GetCurrency() < amountToAdjust)
+                                        amountToAdjust = SceneContext.Instance.PlayerState.GetCurrency();
+                                    SceneContext.Instance.PlayerState.SpendCurrency(amountToAdjust);
+                                }
+                                else
+                                {
+                                    SceneContext.Instance.PlayerState.AddCurrency(amountToAdjust);
+                                }
+                                break;  
+                            case "shoot_gun":
+                                WeaponVacuum vacuum = SRSingleton<SceneContext>.Instance.Player.GetComponentInChildren<WeaponVacuum>();
+                                Traverse.Create(vacuum).Method("Expel", new HashSet<GameObject>()).GetValue();
                                 break;
                         }
                     }
