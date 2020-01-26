@@ -22,6 +22,7 @@ namespace TwitchIntegration
     {
         public static ConcurrentQueue<RewardData> rewardsQueue = new ConcurrentQueue<RewardData>();
         public static List<UpgradeHolder> plotsEdited = new List<UpgradeHolder>();
+        public static List<DelayedDowngrade> delayedDowngrades = new List<DelayedDowngrade>();
         public static bool push = false;
         public static PushData pushData;
 
@@ -86,41 +87,7 @@ namespace TwitchIntegration
                                 int.TryParse(reward.args[1], out numPlots);
                                 bool removeAllWalls;
                                 bool.TryParse(reward.args[2], out removeAllWalls);
-                                List<LandPlotModel> validplots = new List<LandPlotModel>();
-                                foreach (LandPlotModel plot in SceneContext.Instance.GameModel.AllLandPlots().Values)
-                                    if (plot.typeId == LandPlot.Id.CORRAL)
-                                        validplots.Add(plot);
-
-                                while (validplots.Count > 0 && numPlots != 0)
-                                {
-                                    LandPlotModel plotModel = validplots.ToArray()[UnityEngine.Random.Range(0, validplots.Count())];
-                                    validplots.Remove(plotModel);
-                                    numPlots--;
-                                    LandPlot plot = ((GameObject)Traverse.Create(plotModel).Field("gameObj").GetValue()).GetComponentInChildren<LandPlot>();
-                                    HashSet<LandPlot.Upgrade> upgrades = new HashSet<LandPlot.Upgrade>();
-                                    foreach (PlotUpgrader component in plot.GetComponents<PlotUpgrader>())
-                                    {
-                                        if (component is AirNetUpgrader && plot.HasUpgrade(LandPlot.Upgrade.AIR_NET))
-                                        {
-                                            upgrades.Add(LandPlot.Upgrade.AIR_NET);
-                                            foreach (GameObject airNet in ((AirNetUpgrader)component).airNets)
-                                                airNet.SetActive(false);
-                                        }
-                                        else if (component is SolarShieldUpgrader && plot.HasUpgrade(LandPlot.Upgrade.SOLAR_SHIELD))
-                                        {
-                                            upgrades.Add(LandPlot.Upgrade.SOLAR_SHIELD);
-                                            foreach (GameObject shield in ((SolarShieldUpgrader)component).shields)
-                                                shield.SetActive(false);
-                                        }
-                                        else if (component is WallUpgrader && plot.HasUpgrade(LandPlot.Upgrade.WALLS))
-                                        {
-                                            upgrades.Add(LandPlot.Upgrade.WALLS);
-                                            ((WallUpgrader)component).standardWalls.SetActive(!removeAllWalls);
-                                            ((WallUpgrader)component).upgradeWalls.SetActive(false);
-                                        }
-                                        plotsEdited.Add(new UpgradeHolder(plot, upgrades, duration * 1000));
-                                    }
-                                }
+                                delayedDowngrades.Add(new DelayedDowngrade(numPlots, duration, removeAllWalls));
                                 break;
                             case "spawn_object":
                                 int objectID;
@@ -166,7 +133,7 @@ namespace TwitchIntegration
                                 {
                                     SceneContext.Instance.PlayerState.AddCurrency(amountToAdjust);
                                 }
-                                break;  
+                                break;
                             case "shoot_gun":
                                 WeaponVacuum vacuum = SRSingleton<SceneContext>.Instance.Player.GetComponentInChildren<WeaponVacuum>();
                                 Traverse.Create(vacuum).Method("Expel", new HashSet<GameObject>()).GetValue();
@@ -179,15 +146,21 @@ namespace TwitchIntegration
                         UpgradeHolder plot = plotsEdited[i];
                         if ((currentTime - plot.Spawned).TotalMilliseconds > plot.Duration)
                         {
-                            Debug.Log("Reset Upgrades");
-                            plot.Reset();
                             plotsEdited.RemoveAt(i);
+                            plot.Reset();
                         }
                     }
 
                     if (push)
                     {
-                        SceneContext.Instance.Player.transform.position += pushData.push;
+                        try
+                        {
+                            SceneContext.Instance.Player.transform.position += pushData.push;
+                        }
+                        catch
+                        {
+                            Debug.LogError("PLAYER (or related) IS NULL! Unable to push the player!");
+                        }
                         if ((currentTime - pushData.startTime).TotalMilliseconds > pushData.duration)
                         {
                             pushData.left--;
@@ -199,6 +172,65 @@ namespace TwitchIntegration
                             {
                                 pushData.startTime = currentTime;
                                 pushData.nextPush();
+                            }
+                        }
+                    }
+
+                    for (int i = delayedDowngrades.Count - 1; i >= 0; i--)
+                    {
+                        DelayedDowngrade dd = delayedDowngrades[i];
+
+                        List<LandPlotModel> validplots = new List<LandPlotModel>();
+                        //this.GetComponentInParent<Region>();
+                        int corralPlots = 0;
+                        RegionMember currentRegion = (RegionMember)Traverse.Create(SceneContext.Instance.PlayerZoneTracker).Field("member").GetValue();
+                        foreach (LandPlotModel plot in SceneContext.Instance.GameModel.AllLandPlots().Values)
+                        {
+                            if (plot.typeId == LandPlot.Id.CORRAL)
+                            {
+                                corralPlots++;
+                                if (currentRegion.IsInRegion(((GameObject)Traverse.Create(plot).Field("gameObj").GetValue()).GetComponentInParent<Region>().setId))
+                                {
+                                    validplots.Add(plot);
+                                }
+                            }
+                        }
+
+                        Debug.LogError("Corral Plots: " + corralPlots + " Valid Plots: " + validplots.Count);
+
+                        if (corralPlots != 0 && validplots.Count == 0)
+                            continue;
+
+                        delayedDowngrades.RemoveAt(i);
+
+                        while (validplots.Count > 0 && dd.numPlots != 0)
+                        {
+                            LandPlotModel plotModel = validplots.ToArray()[UnityEngine.Random.Range(0, validplots.Count())];
+                            validplots.Remove(plotModel);
+                            dd.numPlots--;
+                            LandPlot plot = ((GameObject)Traverse.Create(plotModel).Field("gameObj").GetValue()).GetComponentInChildren<LandPlot>();
+                            HashSet<LandPlot.Upgrade> upgrades = new HashSet<LandPlot.Upgrade>();
+                            foreach (PlotUpgrader component in plot.GetComponents<PlotUpgrader>())
+                            {
+                                if (component is AirNetUpgrader && plot.HasUpgrade(LandPlot.Upgrade.AIR_NET))
+                                {
+                                    upgrades.Add(LandPlot.Upgrade.AIR_NET);
+                                    foreach (GameObject airNet in ((AirNetUpgrader)component).airNets)
+                                        airNet.SetActive(false);
+                                }
+                                else if (component is SolarShieldUpgrader && plot.HasUpgrade(LandPlot.Upgrade.SOLAR_SHIELD))
+                                {
+                                    upgrades.Add(LandPlot.Upgrade.SOLAR_SHIELD);
+                                    foreach (GameObject shield in ((SolarShieldUpgrader)component).shields)
+                                        shield.SetActive(false);
+                                }
+                                else if (component is WallUpgrader && plot.HasUpgrade(LandPlot.Upgrade.WALLS))
+                                {
+                                    upgrades.Add(LandPlot.Upgrade.WALLS);
+                                    ((WallUpgrader)component).standardWalls.SetActive(!dd.removeAllWalls);
+                                    ((WallUpgrader)component).upgradeWalls.SetActive(false);
+                                }
+                                plotsEdited.Add(new UpgradeHolder(plot, upgrades, dd.duration * 1000));
                             }
                         }
                     }
@@ -338,7 +370,7 @@ namespace TwitchIntegration
 
             public void nextPush()
             {
-                pushData.push = getBoundedRandVector(minPush, maxPush);
+                push = getBoundedRandVector(minPush, maxPush);
             }
 
             private Vector3 getBoundedRandVector(float min, float max)
@@ -356,6 +388,20 @@ namespace TwitchIntegration
                     z = UnityEngine.Random.Range(min, max);
 
                 return new Vector3(x, 0, z);
+            }
+        }
+
+        public class DelayedDowngrade
+        {
+            public int numPlots;
+            public int duration;
+            public bool removeAllWalls;
+
+            public DelayedDowngrade(int numPlots, int duration, bool removeAllWalls)
+            {
+                this.numPlots = numPlots;
+                this.duration = duration;
+                this.removeAllWalls = removeAllWalls;
             }
         }
     }
