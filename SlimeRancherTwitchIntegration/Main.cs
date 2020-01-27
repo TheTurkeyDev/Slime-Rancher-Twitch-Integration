@@ -54,7 +54,7 @@ namespace TwitchIntegration
         {
             static void Prefix()
             {
-                if (Levels.IsLevel(Levels.WORLD))
+                if (Levels.IsLevel(Levels.WORLD) && SRInput.Instance.GetInputMode() != SRInput.InputMode.PAUSE)
                 {
                     DateTime currentTime = DateTime.UtcNow;
                     Transform playerLoc = SceneContext.Instance.Player.transform;
@@ -189,7 +189,7 @@ namespace TwitchIntegration
                             if (plot.typeId == LandPlot.Id.CORRAL)
                             {
                                 corralPlots++;
-                                if (currentRegion.IsInRegion(((GameObject)Traverse.Create(plot).Field("gameObj").GetValue()).GetComponentInParent<Region>().setId))
+                                if (currentRegion.setId == ((GameObject)Traverse.Create(plot).Field("gameObj").GetValue()).GetComponentInParent<Region>().setId)
                                 {
                                     validplots.Add(plot);
                                 }
