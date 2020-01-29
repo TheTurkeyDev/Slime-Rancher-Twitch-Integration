@@ -54,7 +54,7 @@ namespace TwitchIntegration
         {
             static void Prefix()
             {
-                if (Levels.IsLevel(Levels.WORLD) && SRInput.Instance.GetInputMode() != SRInput.InputMode.PAUSE)
+                if (Levels.IsLevel(Levels.WORLD) && SRInput.Instance.GetInputMode() == SRInput.InputMode.DEFAULT)
                 {
                     DateTime currentTime = DateTime.UtcNow;
                     Transform playerLoc = SceneContext.Instance.Player.transform;
@@ -189,14 +189,12 @@ namespace TwitchIntegration
                             if (plot.typeId == LandPlot.Id.CORRAL)
                             {
                                 corralPlots++;
-                                if (currentRegion.setId == ((GameObject)Traverse.Create(plot).Field("gameObj").GetValue()).GetComponentInParent<Region>().setId)
+                                if (Vector3.Distance(SceneContext.Instance.Player.transform.position, ((GameObject)Traverse.Create(plot).Field("gameObj").GetValue()).transform.position) < 100)
                                 {
                                     validplots.Add(plot);
                                 }
                             }
                         }
-
-                        Debug.LogError("Corral Plots: " + corralPlots + " Valid Plots: " + validplots.Count);
 
                         if (corralPlots != 0 && validplots.Count == 0)
                             continue;
