@@ -57,7 +57,9 @@ namespace TwitchIntegration
                 if (Levels.IsLevel(Levels.WORLD) && SRInput.Instance.GetInputMode() == SRInput.InputMode.DEFAULT)
                 {
                     DateTime currentTime = DateTime.UtcNow;
+                    SceneContext sceneContext = SRSingleton<SceneContext>.Instance;
                     Transform playerLoc = SceneContext.Instance.Player.transform;
+                    PlayerState playerState = SceneContext.Instance.PlayerState;
                     RewardData reward;
                     if (rewardsQueue.TryDequeue(out reward))
                     {
@@ -66,7 +68,7 @@ namespace TwitchIntegration
                             case "sound":
                                 break;
                             case "inventory_bomb":
-                                Ammo ammo = SceneContext.Instance.PlayerState.Ammo;
+                                Ammo ammo = playerState.Ammo;
                                 foreach (Slot s in (Slot[])Traverse.Create(ammo).Property("Slots").GetValue())
                                 {
                                     if (s == null)
@@ -125,18 +127,83 @@ namespace TwitchIntegration
                                 int.TryParse(reward.args[0], out amountToAdjust);
                                 if (amountToAdjust < 0)
                                 {
-                                    if (SceneContext.Instance.PlayerState.GetCurrency() < amountToAdjust)
-                                        amountToAdjust = SceneContext.Instance.PlayerState.GetCurrency();
-                                    SceneContext.Instance.PlayerState.SpendCurrency(amountToAdjust);
+                                    if (playerState.GetCurrency() < amountToAdjust)
+                                        amountToAdjust = playerState.GetCurrency();
+                                    playerState.SpendCurrency(amountToAdjust);
                                 }
                                 else
                                 {
-                                    SceneContext.Instance.PlayerState.AddCurrency(amountToAdjust);
+                                    playerState.AddCurrency(amountToAdjust);
                                 }
                                 break;
                             case "shoot_gun":
-                                WeaponVacuum vacuum = SRSingleton<SceneContext>.Instance.Player.GetComponentInChildren<WeaponVacuum>();
+                                WeaponVacuum vacuum = sceneContext.Player.GetComponentInChildren<WeaponVacuum>();
                                 Traverse.Create(vacuum).Method("Expel", new HashSet<GameObject>()).GetValue();
+                                break;
+                            case "day_night":
+                                float hour = sceneContext.TimeDirector.CurrHour();
+                                if (hour > 6 && hour < 18)
+                                    sceneContext.TimeDirector.FastForwardTo(sceneContext.TimeDirector.GetHourAfter(0, 18f));
+                                else
+                                    sceneContext.TimeDirector.FastForwardTo(sceneContext.TimeDirector.GetNextDawn());
+                                break;
+                            case "stat_edit":
+                                string type = reward.args[0];
+                                string action = reward.args[1];
+                                int amount;
+                                int.TryParse(reward.args[2], out amount);
+                                if (type.Equals("health"))
+                                {
+                                    switch (action)
+                                    {
+                                        case "add":
+                                            playerState.SetHealth(Math.Min(playerState.GetCurrHealth() + amount, playerState.GetMaxHealth()));
+                                            break;
+                                        case "sub":
+                                            playerState.SetHealth(Math.Max(playerState.GetCurrHealth() - amount, 1));
+                                            break;
+                                        case "max":
+                                            playerState.SetHealth(playerState.GetMaxHealth());
+                                            break;
+                                        case "set":
+                                            playerState.SetHealth(amount);
+                                            break;
+                                    }
+                                }
+                                else if (type.Equals("energy"))
+                                {
+                                    switch (action)
+                                    {
+                                        case "add":
+                                            playerState.SetEnergy(Math.Min(playerState.GetCurrEnergy() + amount, playerState.GetMaxEnergy()));
+                                            break;
+                                        case "sub":
+                                            playerState.SetEnergy(Math.Max(playerState.GetCurrEnergy() - amount, 0));
+                                            break;
+                                        case "max":
+                                            playerState.SetEnergy(playerState.GetMaxEnergy());
+                                            break;
+                                        case "set":
+                                            playerState.SetEnergy(amount);
+                                            break;
+                                    }
+                                }
+                                else if (type.Equals("rads"))
+                                {
+                                    switch (action)
+                                    {
+                                        case "add":
+                                            playerState.SetRad(playerState.GetCurrRad() + amount);
+                                            break;
+                                        case "sub":
+                                            playerState.SetRad(Math.Max(playerState.GetCurrRad() - amount, 0));
+                                            break;
+                                        case "set":
+                                            playerState.SetRad(amount);
+                                            break;
+                                    }
+                                }
+
                                 break;
                         }
                     }
@@ -155,7 +222,7 @@ namespace TwitchIntegration
                     {
                         try
                         {
-                            SceneContext.Instance.Player.transform.position += pushData.push;
+                            sceneContext.Player.transform.position += pushData.push;
                         }
                         catch
                         {
@@ -183,13 +250,12 @@ namespace TwitchIntegration
                         List<LandPlotModel> validplots = new List<LandPlotModel>();
                         //this.GetComponentInParent<Region>();
                         int corralPlots = 0;
-                        RegionMember currentRegion = (RegionMember)Traverse.Create(SceneContext.Instance.PlayerZoneTracker).Field("member").GetValue();
-                        foreach (LandPlotModel plot in SceneContext.Instance.GameModel.AllLandPlots().Values)
+                        foreach (LandPlotModel plot in sceneContext.GameModel.AllLandPlots().Values)
                         {
                             if (plot.typeId == LandPlot.Id.CORRAL)
                             {
                                 corralPlots++;
-                                if (Vector3.Distance(SceneContext.Instance.Player.transform.position, ((GameObject)Traverse.Create(plot).Field("gameObj").GetValue()).transform.position) < 100)
+                                if (Vector3.Distance(sceneContext.Player.transform.position, ((GameObject)Traverse.Create(plot).Field("gameObj").GetValue()).transform.position) < 100)
                                 {
                                     validplots.Add(plot);
                                 }
